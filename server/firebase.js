@@ -7,15 +7,18 @@ var httpRequest = require('request');
 var freshPost = myDataRef.child('Fresh Post');
 
 var setTokenCookie = exports.setTokenCookie = function (request, response, token){
-  newtoken = tokenFactory()
-  if(token !== undefined){
+  newtoken = tokenFactory(); //Sets a random token
+  
+  if (token !== undefined) {
     newToken = token;
   }
+  
   response.cookies.set('token', newToken, {
     maxAge: 2628000000,   // expires in 1 month
     httpOnly: false,    // more secure but then can't access from client
   });
-  response.send("MurMur'd");
+  
+  response.send("MurMur'd"); //This is for Slack
 };
 
 
@@ -35,7 +38,8 @@ var insertPost = exports.insertPost = function(request, response, dataRef){
         var post = dataRef.push();    //ID generator
         var postId = post.key();      //Grabs the ID
         
-        post.set({                    //Pushes the post data into the database
+        //Pushes the post data into the database
+        post.set({
           uid: authData.auth.uid,
           messageId : postId,
           message : postMessage,
@@ -52,24 +56,23 @@ var insertPost = exports.insertPost = function(request, response, dataRef){
         newJwtClaims = authData.auth;
         newJwtClaims.postedMessagesId = newJwtClaims.postedMessagesId + 1;
         newToken = tokenFactory(newJwtClaims);
+        
+        //Sets the url to post on slack
         var url = 'https://mks22.slack.com/api/chat.postMessage'
-
+        
         slackMessage = {
           token: 'xoxp-6711708658-6752831218-9166692273-ff23b3',
           channel: '#mur_mur',
           text: postMessage,
           username: 'MurMur Bot'
         }
-
+        
         httpRequest.post( url,
-          {
-            form: slackMessage
-          },
+          { form: slackMessage },
           function(err, data){
-              console.log('Slack Message Posted');
+            console.log('Slack Message Posted');
           } 
         );
-
 
         setTokenCookie(request, response, newToken);
       }
@@ -97,16 +100,17 @@ var votePost = exports.votePost = function(request, response, dataRef){
         var voteRequest = request.body.vote;
 
         var fbRef = freshPost.parent()
-        var votedIdRef = fbRef.child('sessions/' + authData.auth.uid + '/voted/' + messageId);
+        var votedIdRef = fbRef.child('sessions/' + authData.auth.uid + '/voted/' + messageId); //The unique user who's doing the changes
         
-        var vote = dataRef.child(messageId + '/votes');
+        var vote = dataRef.child(messageId + '/votes'); //Sets up the place where the changes will happen
         
+        //.once method listens to the database once, then calls it off after it's done
         votedIdRef.once('value', function(snapshot){
           if (snapshot.val()) {
             var value = snapshot.val();
             
             if (value.type === "downvoted") {
-              vote.transaction(function (value){
+              vote.transaction(function (value){ //.transaction method lets you change a value without affecting other values
                 if (voteRequest === true) {
                   votedIdRef.set(null);
                   return value + 1;
@@ -114,7 +118,7 @@ var votePost = exports.votePost = function(request, response, dataRef){
               });
             }
             else {
-              vote.transaction(function (value){
+              vote.transaction(function (value){ //.transaction method lets you change a value without affecting other values
                 if (voteRequest === false) {
                   votedIdRef.set(null);
                   return value - 1;
@@ -123,7 +127,7 @@ var votePost = exports.votePost = function(request, response, dataRef){
             }
           } 
           else {
-            vote.transaction(function (value){
+            vote.transaction(function (value){ //.transaction method lets you change a value without affecting other values
               if (voteRequest === true) {
                 votedIdRef.set({ type : "upvoted" });
                 return value + 1;
@@ -143,9 +147,6 @@ var votePost = exports.votePost = function(request, response, dataRef){
         setTokenCookie(request, response, newToken);
       }
     });
-  } 
-  else {
-    response.sendStatus(404);  // look up right error code later
   }
 }
 
@@ -205,16 +206,17 @@ var voteComment = exports.voteComment = function(request, response, dataRef){
         var voteRequest = request.body.vote;
         
         var fbRef = freshPost.parent();
-        var votedIdRef = fbRef.child('sessions/' + authData.auth.uid + '/voted/' + commentId);
+        var votedIdRef = fbRef.child('sessions/' + authData.auth.uid + '/voted/' + commentId); //The unique user who's doing the changes
         
-        var vote = dataRef.child(messageId + '/comments/' + commentId + '/votes');
+        var vote = dataRef.child(messageId + '/comments/' + commentId + '/votes'); //Sets up the place where the changes will happen
         
+        //.once method listens to the database once, then calls it off after it's done
         votedIdRef.once('value', function(snapshot){
           if (snapshot.val()) {
             var value = snapshot.val();
             
             if (value.type === "downvoted") {
-              vote.transaction(function (value){
+              vote.transaction(function (value){ //.transaction method lets you change a value without affecting other values
                 if (voteRequest === true) {
                   votedIdRef.set(null);
                   return value + 1;
@@ -222,7 +224,7 @@ var voteComment = exports.voteComment = function(request, response, dataRef){
               });
             }
             else {
-              vote.transaction(function (value){
+              vote.transaction(function (value){ //.transaction method lets you change a value without affecting other values
                 if (voteRequest === false) {
                   votedIdRef.set(null);
                   return value - 1;
@@ -231,7 +233,7 @@ var voteComment = exports.voteComment = function(request, response, dataRef){
             }
           } 
           else {
-            vote.transaction(function (value){
+            vote.transaction(function (value){ //.transaction method lets you change a value without affecting other values
               if (voteRequest === true) {
                 votedIdRef.set({ type : "upvoted" });
                 return value + 1;

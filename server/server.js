@@ -14,8 +14,9 @@ app.use(bodyParser.json());
 app.use(Cookies.express())
 
 app.get('/noToken', function(request, response){
+  //If user doesn't have token yet, will present them the introduction page
   fs.readFile('../client/src/invite.html', function(err, data){
-    if(err){
+    if (err) {
       console.log('error reading invite.html')
     }
     response.setHeader('Content-Type', 'text/html')
@@ -24,39 +25,45 @@ app.get('/noToken', function(request, response){
 })
 
 app.post('/noToken', function(request, response){
-  if(request.cookies.get('token')){
+  //generates the user's unique token
+  if (request.cookies.get('token')) {
     console.log('already have a token')
     request.method = 'get';
-    // response.redirect('/murmur');
     response.send({redirect: '/murmur'});
-  } else if(request.body.inviteCode === 'mks22'){                   // set Token Cookie
+  } 
+  else if (request.body.inviteCode === 'mks22') {                   // set Token Cookie
     response.cookies.set('token', tokenFactory(), {
       maxAge: 2628000000,   // expires in 1 month
       httpOnly: false,    // more secure but then can't access from client
     })
     request.method = 'get';
     response.send({redirect: '/murmur'});
-  } else {
+  } 
+  else {
     response.send('Correct Invitation Code Required.')
   }
 })
 
 app.get('/', function(request, response){
+  //Checks if the user has a token or not
   if(request.cookies.get('token')){
     response.redirect('/murmur');
-  } else {
-    console.log('no token redirect')
+  } 
+  else {
     response.redirect('/noToken');
   }
 })
 
-app.post('/', function(request, response){ //request.body.url = 'newPost'
+app.post('/', function(request, response){
+  //Post request for new posts on murmur
   var data = '';
-  request.on('data', function(chunk){
+  request.on('data', function(chunk){ //This parses the data from slack
     data += chunk;
   });
 
-  var slackObject = {}
+  var slackObject = {};
+  
+   //This handles post requests from slack
   request.on('end', function(){
     data.split('&').forEach(function(keyVal){
       var keyValArr = keyVal.split('=');
@@ -76,22 +83,24 @@ app.post('/', function(request, response){ //request.body.url = 'newPost'
     console.log('SLAAAAAAAAACK', request.body);
     firebase.insertPost(request, response);
   })
+  
+  //This handles posts not from Slack
   firebase.insertPost(request,response);
 })
 
-app.post('/comment', function(request, response){ //request.body.url = 'newPost'
+app.post('/comment', function(request, response){
   firebase.comment(request, response);
 })
 
-app.post('/vote', function(request,response){ //request.body.url = 'newPost'
+app.post('/vote', function(request,response){
   firebase.votePost(request, response);
 })
 
-app.post('/voteComment', function(request,response){ //request.body.url = 'newPost'
+app.post('/voteComment', function(request,response){
   firebase.voteComment(request, response);
 })
 
-app.post('/favorite', function(request,response){ //request.body.url = 'newPost'
+app.post('/favorite', function(request,response){
   firebase.toggleFavorite(request, response);
 })
 
